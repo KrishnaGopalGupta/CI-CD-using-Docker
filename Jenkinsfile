@@ -1,62 +1,44 @@
 pipeline {
-    agent any
-	
-	  tools
-    {
-       maven "Maven"
-    }
- stages {
-      stage('checkout') {
-           steps {
-             
-                git branch: 'master', url: 'https://github.com/devops4solutions/CI-CD-using-Docker.git'
-             
-          }
+    agent any 
+    stages {
+        stage('SCM Checkout'){
+            steps{
+                git 'https://github.com/KrishnaGopalGupta/CI-CD-using-Docker.git'
+            }
         }
-	 stage('Execute Maven') {
-           steps {
-             
-                sh 'mvn package'             
-          }
-        }
-        
 
-  stage('Docker Build and Tag') {
-           steps {
-              
-                sh 'docker build -t samplewebapp:latest .' 
-                sh 'docker tag samplewebapp nikhilnidhi/samplewebapp:latest'
-                //sh 'docker tag samplewebapp nikhilnidhi/samplewebapp:$BUILD_NUMBER'
-               
-          }
-        }
-     
-  stage('Publish image to Docker Hub') {
-          
+        stage('Build APP'){
             steps {
-        withDockerRegistry([ credentialsId: "dockerHub", url: "" ]) {
-          sh  'docker push nikhilnidhi/samplewebapp:latest'
-        //  sh  'docker push nikhilnidhi/samplewebapp:$BUILD_NUMBER' 
-        }
-                  
-          }
-        }
-     
-      stage('Run Docker container on Jenkins Agent') {
-             
-            steps 
-			{
-                sh "docker run -d -p 8003:8080 nikhilnidhi/samplewebapp"
- 
+                MVNHome = tool name: 'LocalMVN', type: 'maven'
+                MVNCMD = "${MVNHome}/bin/mvn"
+                sh "${MVNCMD} clean package"
             }
         }
- stage('Run Docker container on remote hosts') {
-             
-            steps {
-                sh "docker -H ssh://jenkins@172.31.28.25 run -d -p 8003:8080 nikhilnidhi/samplewebapp"
- 
+
+        stage('Docker Build Tag'){
+            steps{
+
+                sh 'docker build -t krish0123/samplewebapp:latest .'
             }
         }
+
+        stage('Docker push images') {
+
+            steps{
+
+                withCredentials([string(credentialsId: 'Docker_PWD', variable: 'Docker_pwd')]) {
+                sh 'docker login -u krish0123 -p Krishna@123!@#'      
+            }        
+
+            sh 'docker push krish0123/samplewebapp:latest' 
+       }
+        
     }
-	}
-    
+
+    stage('Docker run application') {
+        steps{
+            sh "docker run -d -p 8003:8080 krish0123/samplewebapp:latest"
+        }
+     }
+   }
+}
